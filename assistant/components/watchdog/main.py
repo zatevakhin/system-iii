@@ -1,12 +1,11 @@
-from datetime import datetime
 from enum import Enum, auto
-from typing import Callable, List, Optional
+from functools import partial
+from typing import Callable, List
 import os
 import numpy as np
 import resampy
 import soundfile as sf
 from queue import Queue
-from numpy.typing import NDArray
 from pydantic import BaseModel, Field
 
 from assistant.config import (
@@ -15,7 +14,6 @@ from assistant.config import (
 )
 from assistant.core.component import Component
 from assistant.utils.audio import VadFilter, chop_audio
-from assistant.utils.audio.reshape import FixedLengthAudioChunker
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, EVENT_TYPE_CREATED
 
@@ -23,8 +21,12 @@ from assistant.utils.utils import observe
 
 
 from . import events
-from assistant.components import watchdog
 from assistant.components.mumble.mumble import SpeechSegment
+
+
+class WatchdogSourceInfo(BaseModel):
+    file: str
+
 
 class WatchDirectory(BaseModel):
     path: str
@@ -53,7 +55,11 @@ class Watchdog(Component):
 
     @property
     def events(self) -> List[str]:
-        return [events.WATCHDOG_FILE_NEW, events.WATCHDOG_FILE_AUDIO, events.WATCHDOG_AUDIO_SPEECH_DETECTED]
+        return [
+            events.WATCHDOG_FILE_NEW,
+            events.WATCHDOG_FILE_AUDIO,
+            events.WATCHDOG_AUDIO_SPEECH_DETECTED,
+        ]
 
     def initialize(self) -> None:
         super().initialize()
@@ -105,6 +111,7 @@ class Watchdog(Component):
         )
         resampled = (resampled_float * np.iinfo(np.int16).max).astype(np.int16)
 
+        self.vad_filter = VadFilter(partial(self.on_speech, str(file)))
         for segment in chop_audio(
             resampled, SPEECH_PIPELINE_SAMPLERATE, SPEECH_PIPELINE_BUFFER_SIZE_MILIS
         ):
@@ -112,10 +119,11 @@ class Watchdog(Component):
 
         self.logger.info(f"Processing of '{file}' audio file done")
 
-    def on_speech(self, speech: bytes):
+    def on_speech(self, file: str, speech: bytes):
         self.logger.info(f"{type(speech)}")
 
         data = np.frombuffer(speech, dtype=np.int16)
 
-        segment = SpeechSegment(source="watchdog", data=data)
+        info = WatchdogSourceInfo(file=file)
+        segment = SpeechSegment(source_info=info, source="watchdog", data=data)
         self.proxy(events.WATCHDOG_AUDIO_SPEECH_DETECTED)(segment)

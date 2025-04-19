@@ -3,7 +3,7 @@ from datetime import datetime
 from functools import partial
 from queue import Queue
 from time import sleep
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 import reactivex as rx
@@ -29,8 +29,9 @@ from assistant.config import (
 from assistant.core import service
 from assistant.utils import observe
 from assistant.core.component import Component
-from assistant.utils.audio import VadFilter
+from assistant.utils.audio import VadFilter, chop_audio
 from assistant.utils.audio.reshape import FixedLengthAudioChunker
+from uuid import uuid4, UUID
 from . import events
 
 
@@ -39,11 +40,16 @@ class Sentence(BaseModel):
     audio: Any
     length: float
 
+class SourceInfo(BaseModel):
+    user: str
+    sequence_id: int
 
 class SpeechSegment(BaseModel):
     source: str
+    source_info: Any
     data: NDArray[np.int16] = Field(repr=False)
     timestamp: datetime = Field(default_factory=datetime.now)
+    segment_id: UUID = Field(default_factory=uuid4)
 
     class Config:
         arbitrary_types_allowed = True
@@ -127,6 +133,8 @@ class MumbleInterface(Component):
             user: User = self.client.users[session["session"]]
             self.add_speech_filter(user)
 
+        self.sequence_by_user: dict[str, int] = {}
+
         # self.event_bus.subscribe(events.MUMBLE_AUDIO_PLAY, self.on_play)
         self.logger.info(f"Plugin '{self.name}' initialized and ready")
 
@@ -173,8 +181,15 @@ class MumbleInterface(Component):
         self.logger.info(f"{type(speech)}, {user}")
         username = str(user.get_property("name"))
 
+        if username not in self.sequence_by_user:
+            self.sequence_by_user[username] = 0
+
         buffer = np.frombuffer(speech, dtype=np.int16)
-        segment = SpeechSegment(source=username, data=buffer)
+
+        info = SourceInfo(user=username, sequence_id=self.sequence_by_user[username])
+        segment = SpeechSegment(source="mumble", source_info=info, data=buffer)
+
+        self.sequence_by_user[username] += 1
 
         self.proxy(events.MUMBLE_AUDIO_SPEECH)(segment)
 

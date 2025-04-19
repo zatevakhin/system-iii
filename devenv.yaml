@@ -1,7 +1,7 @@
 allowUnfree: true
 inputs:
   nixpkgs:
-    url: github:cachix/devenv-nixpkgs/rolling
+    url: github:NixOS/nixpkgs/nixos-24.11
   nixpkgs-python:
     url: github:cachix/nixpkgs-python
     inputs:
