@@ -1,0 +1,1 @@
+HELLO_WORLD_EVENT = "hello_world.hello_event"
