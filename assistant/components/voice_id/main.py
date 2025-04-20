@@ -131,7 +131,7 @@ class SpeakerRecognizer:
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.logger.info(f"Using '{device}' device for embedding computation.")
         self.model = Model.from_pretrained(
-            "pyannote/embedding", use_auth_token=hf_token
+            "pyannote/embedding", use_auth_token=hf_token, strict=False
         )
         self.model.eval()
         self.device = device

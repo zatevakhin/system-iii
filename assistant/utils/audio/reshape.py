@@ -18,6 +18,9 @@ class FixedLengthAudioChunker:
         self.audio_buffer = np.array([], dtype=np.int16)
         self.input_samplerate = source_samplerate
 
+    def clear(self):
+        self.audio_buffer = np.array([], dtype=np.int16)
+
     def __call__(self, chunk: bytes):
         self._process_chunk(chunk)
 

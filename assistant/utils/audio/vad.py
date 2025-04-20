@@ -8,10 +8,10 @@ class VadFilter:
     def __init__(
         self,
         callback: Callable,
-        min_speech: int = 4,
-        silence_end: int = 8,
+        min_speech: int = 16,
+        silence_end: int = 10,
         speech_threshold: float = 0.5,
-        preroll_size: int = 5,
+        preroll_size: int = 16,
     ):
         self.vad = SileroVoiceActivityDetector()
 
@@ -26,12 +26,13 @@ class VadFilter:
         self.silence_count = 0
         self.speaking = False
 
-        self.current_speech = bytearray()
+        self.current_speech: np.ndarray = np.array([], dtype=np.int16)
         self.preroll_buffer = deque(maxlen=preroll_size)
 
     def __call__(self, chunk: np.ndarray) -> bool:
-        self.preroll_buffer.append(chunk.copy())
-        is_speech = self.vad(chunk.tobytes()) >= self.speech_threshold
+        self.preroll_buffer.append(chunk)
+        speech_score = self.vad(chunk.tobytes())
+        is_speech = speech_score >= self.speech_threshold
 
         if is_speech:
             self.speech_count += 1
@@ -39,28 +40,26 @@ class VadFilter:
 
             if self.speech_count == self.min_speech:
                 self.speaking = True
+                self.current_speech = np.array([], dtype=np.int16)
 
-                # First, add all the preroll chunks to the speech buffer
                 for preroll_chunk in self.preroll_buffer:
-                    self.current_speech.extend(preroll_chunk)
+                    self.current_speech = np.concatenate([self.current_speech, preroll_chunk])
 
-                # Then add the current chunk
-                self.current_speech.extend(chunk)
             elif self.speaking:
-                self.current_speech.extend(chunk)
+                self.current_speech = np.concatenate([self.current_speech, chunk])
         else:
             self.silence_count += 1
 
             if self.speaking:
-                self.current_speech.extend(chunk)
+                self.current_speech = np.concatenate([self.current_speech, chunk])
 
                 if self.silence_count >= self.silence_end:
                     if self.callback and callable(self.callback):
-                        self.callback(bytes(self.current_speech))
+                        self.callback(self.current_speech.copy())
 
                     self.speaking = False
                     self.speech_count = 0
                     self.silence_count = 0
-                    self.current_speech = bytearray()
-        return is_speech
+                    self.current_speech = np.array([], dtype=np.int16)
 
+        return is_speech

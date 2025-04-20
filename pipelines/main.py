@@ -46,10 +46,10 @@ def main():
     # mumble.on(mm.MUMBLE_CLIENT_CONNECTED, lambda: print("-> connect"))
     # mumble.on(mm.MUMBLE_CLIENT_DISCONNECTED, lambda: print("-> disconnect"))
     mumble.on(mm.MUMBLE_AUDIO_SPEECH, recorder.on_speech)
-    # mumble.on(mm.MUMBLE_AUDIO_SPEECH, transcriber.on_speech)
+    mumble.on(mm.MUMBLE_AUDIO_SPEECH, transcriber.on_speech)
     mumble.on(mm.MUMBLE_AUDIO_SPEECH, void.on_speech)
     watchdog.on(ww.WATCHDOG_AUDIO_SPEECH_DETECTED, void.on_speech)
-    # transcriber.on(tt.TRANSCRIPTION_SEGMENT_DONE, system.on_transcript)
+    transcriber.on(tt.TRANSCRIPTION_SEGMENT_DONE, system.on_transcript)
     # transcriber.on(tt.TRANSCRIPTION_SEGMENT_DONE, shadow.on_transcript)
 
     mumble.initialize()

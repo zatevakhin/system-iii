@@ -29,9 +29,10 @@ from assistant.config import (
 from assistant.core import service
 from assistant.utils import observe
 from assistant.core.component import Component
-from assistant.utils.audio import VadFilter, chop_audio
+from assistant.utils.audio import VadFilter, chop_audio, create_empty_audio
 from assistant.utils.audio.reshape import FixedLengthAudioChunker
 from uuid import uuid4, UUID
+
 from . import events
 
 
@@ -40,9 +41,11 @@ class Sentence(BaseModel):
     audio: Any
     length: float
 
+
 class SourceInfo(BaseModel):
     user: str
     sequence_id: int
+
 
 class SpeechSegment(BaseModel):
     source: str
@@ -122,6 +125,8 @@ class MumbleInterface(Component):
         )
         self.client.is_ready()  # waits connection
 
+        self.fake_silence_timers: dict[str, threading.Timer] = {}
+
         if mumble_channel:
             if channel := self.client.channels.find_by_name(mumble_channel):
                 channel: Channel = channel
@@ -148,7 +153,10 @@ class MumbleInterface(Component):
 
         if username not in self.speech_filter_for_source:
             self.speech_filter_for_source[username] = VadFilter(
-                partial(self.on_speech, source),
+                callback=partial(self.on_speech, source),
+                min_speech=16,
+                silence_end=16,
+                preroll_size=16,
             )
 
         if username not in self.fixed_chunker_for_source:
@@ -158,6 +166,12 @@ class MumbleInterface(Component):
                 source_samplerate=PYMUMBLE_SAMPLERATE,
                 target_samplerate=SPEECH_PIPELINE_SAMPLERATE,
             )
+
+        # HACK: Put some silence in buffer. coz there some shit happens when there first chunk of sound sent
+        if username in self.fixed_chunker_for_source:
+            silence = create_empty_audio(32, PYMUMBLE_SAMPLERATE, np.int16)
+            self.fixed_chunker_for_source[username](silence)
+
 
     def shutdown(self) -> None:
         super().shutdown()
@@ -175,21 +189,34 @@ class MumbleInterface(Component):
     def on_sound_from_source(self, source: dict, chunk: SoundChunk):
         username = source.get("name", None)
         assert username is not None
+
+        # HACK: Adding some silence if there was no new segments of audio
+        if username in self.fake_silence_timers:
+            self.fake_silence_timers[username].cancel()
+            del self.fake_silence_timers[username]
+
+        def callback():
+            self.logger.debug("Adding some silence on callback")
+            for _ in range(16):
+                silence = create_empty_audio(32, PYMUMBLE_SAMPLERATE, np.int16)
+                self.fixed_chunker_for_source[username](silence)
+
+        self.fake_silence_timers[username] = threading.Timer(0.100, callback)
+        self.fake_silence_timers[username].start()
         self.fixed_chunker_for_source[username](chunk.pcm)
 
-    def on_speech(self, user: User, speech: bytes):
+    def on_speech(self, user: User, speech: np.ndarray):
         self.logger.info(f"{type(speech)}, {user}")
         username = str(user.get_property("name"))
 
         if username not in self.sequence_by_user:
             self.sequence_by_user[username] = 0
 
-        buffer = np.frombuffer(speech, dtype=np.int16)
-
         info = SourceInfo(user=username, sequence_id=self.sequence_by_user[username])
-        segment = SpeechSegment(source="mumble", source_info=info, data=buffer)
+        segment = SpeechSegment(source="mumble", source_info=info, data=speech)
 
         self.sequence_by_user[username] += 1
+        self.fixed_chunker_for_source[username].clear()
 
         self.proxy(events.MUMBLE_AUDIO_SPEECH)(segment)
 
