@@ -39,4 +39,13 @@ plugins:
     enabled: false
     log_level: "INFO"
     location: ./.recordings
+  telegram_sink:
+    enabled: true
+    log_level: "INFO"
+    telegram_api_id: "<api_id>"
+    telegram_api_hash: "<api_hash>"
+    telegram_phone_number: "<phone_number>"
+    telegram_chat_name: "me"
+    telegram_session_name: "anon"
+    monitor_telegram_chat: false
 

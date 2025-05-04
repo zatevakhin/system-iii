@@ -23,6 +23,7 @@ watchdog= "^6.0.0"
 soundfile = "^0.13.0"
 qdrant-client = "^1.13.0"
 "pyannote.audio" = "^3.3.0"
+Telethon = "1.40.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9.0"
