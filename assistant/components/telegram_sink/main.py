@@ -24,6 +24,8 @@ import telethon
 #  For example, `types.py` module conflicts with `types` module from Python standard library and crashes telethon library.
 
 
+_SESSIONS_CACHE_DIR = "./sessions_cache/"
+
 class TelegramSink(Component):
     @property
     def version(self) -> str:
@@ -56,7 +58,8 @@ class TelegramSink(Component):
         self._api_id = self.get_config("telegram_api_id", None)
         self._api_hash = self.get_config("telegram_api_hash", None)
 
-        self._client = telethon.TelegramClient(self._session_name, self._api_id, self._api_hash)
+        session_path = _SESSIONS_CACHE_DIR + self._session_name
+        self._client = telethon.TelegramClient(session=session_path, api_id=self._api_id, api_hash=self._api_hash)
 
         self._client.start()
         if self._monitor_telegram_chat:

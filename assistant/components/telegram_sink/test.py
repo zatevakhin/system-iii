@@ -88,7 +88,7 @@ api_hash = os.environ.get("TELEGRAM_API_HASH")
 async def main(chat_name, limit):
     # "async with" creates asynchronous context managers
     # It is an extension of the "with" expression for use only in coroutines within asyncio programs
-    async with TelegramClient('anon', api_id, api_hash) as client:
+    async with TelegramClient('./sessions_cache/anon', api_id, api_hash) as client:
         
         # Get chat info 
         chat_info = await client.get_entity(chat_name)
