@@ -1,11 +1,13 @@
+import asyncio
 from time import sleep
-from assistant.core import EventBus
 
-from assistant.components.telegram_sink import events as tl
-from assistant.components.telegram_sink.main import TelegramSink
 import logging
 
 from rich.logging import RichHandler
+
+from assistant.core import EventBus
+from assistant.components.telegram_sink import events as tl
+from assistant.components.telegram_sink.main import TelegramSink
 from assistant.core.config_manager import ConfigManager
 
 logging.basicConfig(

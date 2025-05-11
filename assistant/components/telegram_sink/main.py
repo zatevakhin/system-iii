@@ -53,13 +53,13 @@ class TelegramSink(Component):
         self._api_id = self.get_config("telegram_api_id", None)
         self._api_hash = self.get_config("telegram_api_hash", None)
 
-        session_path = pathlib.Path(_SESSIONS_CACHE_DIR / self._session_name).resolve()
-        self.logger.info(f"Session path: {session_path}")
-        self._client = telethon.TelegramClient(session=session_path, api_id=self._api_id, api_hash=self._api_hash)
+        self._session_path = pathlib.Path(_SESSIONS_CACHE_DIR / self._session_name).resolve()
+        self.logger.info(f"Session path: {self._session_path}")
+        # self._client = telethon.TelegramClient(session=self._session_path, api_id=self._api_id, api_hash=self._api_hash)
 
-        self._client.start()
-        if self._monitor_telegram_chat:
-            self._client.add_event_handler(self._on_message, telethon.events.NewMessage)
+        # self._client.start()
+        # if self._monitor_telegram_chat:
+        #     self._client.add_event_handler(self._on_message, telethon.events.NewMessage)
 
         # NOTE: Messy locgic
         self._download_messages_thread = None
@@ -82,9 +82,9 @@ class TelegramSink(Component):
             if self._download_messages_thread.is_alive():
                 self.logger.warning("Download thread did not stop gracefully")
 
-        if self._monitor_telegram_chat:
-            self._client.remove_event_handler(self._on_message)
-        self._client.disconnect()
+        # if self._monitor_telegram_chat:
+        #     self._client.remove_event_handler(self._on_message)
+        # self._client.disconnect()
 
         self.logger.info(f"Plugin '{self.name}' shutdown done.")
 
@@ -93,31 +93,28 @@ class TelegramSink(Component):
         self.logger.info(f"Downloading chat history for {self._chat_name} with limit {limit}")
 
         # TODO: Figure out if we need to use here @service decorator or maybe an `observe` mechanism?
-        def download_messages():
-            async def async_download():
-                try:
-                    messages = []
-                    async for message in self._client.iter_messages(self._chat_name, limit=limit):
-                        messages.append(message)
+        async def download(client: telethon.TelegramClient):
+            messages = []            
+            async for message in client.iter_messages(self._chat_name, limit=limit):
+                messages.append(message)
+                if self._stop_download.is_set():
+                    self.logger.info("Download stopped by request")
+                    break
+            self._on_telegram_chat_history_download_finished(messages)
 
-                        if self._stop_download.is_set():
-                            self.logger.info("Download stopped by request")
-                            break
-                    self._on_telegram_chat_history_download_finished(messages)
-                except Exception as e:
-                    self.logger.error(f"Error downloading messages: {e}")
-
-            # Create new event loop for the thread
+        def run_download():
+            # Initialize event loop for this thread... NOTE: Is this legal code?
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(async_download())
-            finally:
-                loop.close()
+            
+            with telethon.TelegramClient(session=self._session_path, api_id=self._api_id, api_hash=self._api_hash) as client:
+                client.loop.run_until_complete(download(client))
+
+
 
         # Reset stop event before starting new download
         self._stop_download.clear()
-        self._download_messages_thread = threading.Thread(target=download_messages)
+        self._download_messages_thread = threading.Thread(target=run_download)
         self._download_messages_thread.start()
 
     def _on_telegram_chat_history_download_finished(self, messages: List[telethon.types.Message]):
