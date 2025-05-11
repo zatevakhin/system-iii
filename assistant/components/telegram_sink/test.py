@@ -1,6 +1,6 @@
 from telethon import TelegramClient
 # # import pandas as pd
-# import json 
+# import json
 # from pathlib import Path
 # import json
 # import os
@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 import os
 from os.path import join, dirname
 
-dotenv_path = join(dirname(__file__), '.env')
+dotenv_path = join(dirname(__file__), ".env")
 load_dotenv(dotenv_path)
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
@@ -27,7 +27,7 @@ api_id = os.environ.get("TELEGRAM_API_ID")
 api_hash = os.environ.get("TELEGRAM_API_HASH")
 # session_name = os.environ.get("TELEGRAM_SESSION_NAME")
 
-# # # Get credentials from the Config.py file 
+# # # Get credentials from the Config.py file
 # # api_id = Config.api_id
 # # api_hash = Config.api_hash
 
@@ -36,33 +36,32 @@ api_hash = os.environ.get("TELEGRAM_API_HASH")
 
 
 # # Make a coroutine main()
-# # This function/coroutine takes in 
-# #  1. the name of the chat we want to collect 
-# #  2. the number of messages to collect 
+# # This function/coroutine takes in
+# #  1. the name of the chat we want to collect
+# #  2. the number of messages to collect
 # # There are many other arguments you can pass (https://docs.telethon.dev/en/stable/modules/client.html?
 
 # async def main(chat_name, limit):
 #     # "async with" creates asynchronous context managers
 #     # It is an extension of the "with" expression for use only in coroutines within asyncio programs
 #     async with TelegramClient(session_name, api_id, api_hash) as client:
-        
-#         # Get chat info 
+
+#         # Get chat info
 #         chat_info = await client.get_entity(chat_name)
-        
+
 #         # Get all the messages, given the limit
 #         # It will return the latest 5 messages if limit is 5
 #         messages = await client.get_messages(entity=chat_info, limit=limit)
-        
+
 #         # return the results in a dictionary
 #         return ({"messages": messages, "channel": chat_info})
 
 
-
 # # limit=None will collect all the messages from nytimes Telegram channel (https://t.me/nytimes)
-# # This open an input box and ask you to input your phone number 
-# #  
+# # This open an input box and ask you to input your phone number
+# #
 # chat_input = "nytimes"
-# results = asyncio.run(main(chat_name = chat_input, limit=5)) 
+# results = asyncio.run(main(chat_name = chat_input, limit=5))
 
 # # Print the results
 # print(results["messages"][0].to_dict())
@@ -88,23 +87,23 @@ api_hash = os.environ.get("TELEGRAM_API_HASH")
 async def main(chat_name, limit):
     # "async with" creates asynchronous context managers
     # It is an extension of the "with" expression for use only in coroutines within asyncio programs
-    async with TelegramClient('./sessions_cache/anon', api_id, api_hash) as client:
-        
-        # Get chat info 
+    async with TelegramClient("./sessions_cache/anon", api_id, api_hash) as client:
+        # Get chat info
         chat_info = await client.get_entity(chat_name)
-        
+
         # Get all the messages, given the limit
         # It will return the latest 5 messages if limit is 5
         messages = await client.get_messages(entity=chat_info, limit=limit)
-        
+
         print(messages)
 
         # return the results in a dictionary
-        return ({"messages": messages, "channel": chat_info})
+        return {"messages": messages, "channel": chat_info}
 
 
 async def count_seconds():
     import asyncio
+
     seconds = 0
     while True:
         await asyncio.sleep(1)
@@ -115,11 +114,10 @@ async def count_seconds():
 
 import asyncio
 
+
 async def run_both():
     # Run both main and count_seconds concurrently
-    await asyncio.gather(
-        main("me", None),
-        count_seconds()
-    )
+    await asyncio.gather(main("me", None), count_seconds())
+
 
 asyncio.run(run_both())
