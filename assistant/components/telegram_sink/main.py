@@ -55,11 +55,14 @@ class TelegramSink(Component):
 
         self._session_path = pathlib.Path(_SESSIONS_CACHE_DIR / self._session_name).resolve()
         self.logger.info(f"Session path: {self._session_path}")
-        # self._client = telethon.TelegramClient(session=self._session_path, api_id=self._api_id, api_hash=self._api_hash)
 
-        # self._client.start()
+        # FIXME: This shit doesn't work. When we have 2 clients simultaneously with the same session,
+        #  they both start using the same session file and we get errors.
         # if self._monitor_telegram_chat:
-        #     self._client.add_event_handler(self._on_message, telethon.events.NewMessage)
+        #     # NOTE: Should I init asyncio loop here or in main_sinks.py? TelegramClient won't work properly without it.
+        #     self._monitoring_client = telethon.TelegramClient(session=self._session_path, api_id=self._api_id, api_hash=self._api_hash)
+        #     self._monitoring_client.start()    
+        #     self._monitoring_client.add_event_handler(self._on_message, telethon.events.NewMessage)
 
         # NOTE: Messy locgic
         self._download_messages_thread = None
@@ -83,8 +86,8 @@ class TelegramSink(Component):
                 self.logger.warning("Download thread did not stop gracefully")
 
         # if self._monitor_telegram_chat:
-        #     self._client.remove_event_handler(self._on_message)
-        # self._client.disconnect()
+        #     self._monitoring_client.remove_event_handler(self._on_message)
+        #     self._monitoring_client.disconnect()
 
         self.logger.info(f"Plugin '{self.name}' shutdown done.")
 

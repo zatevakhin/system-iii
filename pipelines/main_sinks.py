@@ -21,6 +21,10 @@ def main():
     event_bus = EventBus()
     config = ConfigManager()
 
+    # Initialize event loop for the thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     telegram = TelegramSink(config=config)
 
     event_bus.register(telegram)
