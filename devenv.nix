@@ -55,9 +55,9 @@ in {
     fi
 
     OLLAMA_RUNNING=false
-    if [[ "$OLLAMA_BASE_URL" == *"localhost"* ]] || [[ "$OLLAMA_BASE_URL" == *"127.0.0.1"* ]]; then
-        if docker ps | grep -q "ollama/ollama" && curl -s --head --fail "$OLLAMA_BASE_URL" > /dev/null; then
-            echo -e " - ✅$GREEN Ollama server$CLEAR at $GREEN$OLLAMA_BASE_URL$CLEAR is available."
+    if [[ "$OLLAMA_HOST" == *"localhost"* ]] || [[ "$OLLAMA_HOST" == *"127.0.0.1"* ]]; then
+        if docker ps | grep -q "ollama/ollama" && curl -s --head --fail "$OLLAMA_HOST" > /dev/null; then
+            echo -e " - ✅$GREEN Ollama server$CLEAR at $GREEN$OLLAMA_HOST$CLEAR is available."
             OLLAMA_RUNNING=true
         elif docker ps | grep -q "ollama/ollama"; then
             echo -e " - ✅ Docker container with$GREEN Ollama server$CLEAR running, but service not responding."
@@ -67,12 +67,12 @@ in {
             echo -e " - Run$GREEN docker compose up ollama -d$CLEAR to spin-up Ollama server."
         fi
     else
-        if curl -s --head --fail "$OLLAMA_BASE_URL" > /dev/null; then
-            echo -e " - ✅$GREEN Remote Ollama server$CLEAR at $GREEN$OLLAMA_BASE_URL$CLEAR is available."
+        if curl -s --head --fail "$OLLAMA_HOST" > /dev/null; then
+            echo -e " - ✅$GREEN Remote Ollama server$CLEAR at $GREEN$OLLAMA_HOST$CLEAR is available."
         else
-            echo -e " - ❌$RED Remote Ollama server$CLEAR at $RED$OLLAMA_BASE_URL$CLEAR is not responding."
+            echo -e " - ❌$RED Remote Ollama server$CLEAR at $RED$OLLAMA_HOST$CLEAR is not responding."
             echo -e "   - Check if the remote server is running or if there are network/firewall issues."
-            echo -e "   - Alternatively, use a local server with by un-commenting$GREEN OLLAMA_BASE_URL=http://localhost:11434$CLEAR in$GREEN devenv.nix$CLEAR"
+            echo -e "   - Alternatively, use a local server with by un-commenting$GREEN OLLAMA_HOST=http://localhost:11434$CLEAR in$GREEN devenv.nix$CLEAR"
         fi
     fi
 
